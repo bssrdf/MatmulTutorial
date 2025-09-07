@@ -179,8 +179,10 @@ __device__ __forceinline__ void loadFragA(unsigned int *frag, half *smem,
   //   load 16x16 at a time
 #pragma unroll
   for (int i = 0; i < 4; ++i) {
-    int row = tz * 64 + i * 16 + tx / 16 * 8 + tx % 8;
-    int col = ki * KII + tx / 8 % 2 * 8;
+    // the following mods make the thread mapping to smem locations consistent with
+    // what cutlass implicit gemm layout shows
+    int row = tz * 64 + i * 16 + tx % 16; // note difference with matmul-v15 here
+    int col = ki * KII + tx / 16  * 8;    // note difference with matmul-v15 here
     int old_col1 = col;
     col = row % 2 * 32 + col;
     int old_row = row;
@@ -473,7 +475,7 @@ __device__ __forceinline__ void mmaSync(unsigned int *fragA,
                "{%8,  %9},"
                "{%10, %11, %12, %13};\n"
                : "=f"(accum[0]), "=f"(accum[1]), "=f"(accum[4]), "=f"(accum[5])
-               : "r"(fragA[0]), "r"(fragA[2]), "r"(fragA[1]), "r"(fragA[3]),
+               : "r"(fragA[0]), "r"(fragA[1]), "r"(fragA[2]), "r"(fragA[3]), // note difference with matmul-v15 here
                  "r"(fragB[0]), "r"(fragB[1]), "f"(accum[0]), "f"(accum[1]),
                  "f"(accum[4]), "f"(accum[5]));
 
@@ -483,7 +485,7 @@ __device__ __forceinline__ void mmaSync(unsigned int *fragA,
                "{%8,  %9},"
                "{%10, %11, %12, %13};\n"
                : "=f"(accum[2]), "=f"(accum[3]), "=f"(accum[6]), "=f"(accum[7])
-               : "r"(fragA[0]), "r"(fragA[2]), "r"(fragA[1]), "r"(fragA[3]),
+               : "r"(fragA[0]), "r"(fragA[1]), "r"(fragA[2]), "r"(fragA[3]), // note difference with matmul-v15 here
                  "r"(fragB[2]), "r"(fragB[3]), "f"(accum[2]), "f"(accum[3]),
                  "f"(accum[6]), "f"(accum[7]));
 }

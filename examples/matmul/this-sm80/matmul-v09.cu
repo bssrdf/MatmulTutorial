@@ -17,6 +17,7 @@
 #include <cuda.h>
 #include <cuda_fp16.h>
 #include <mma.h>
+#include <stdio.h>
 
 const int MI = 128;
 const int NI = 128;
@@ -40,7 +41,7 @@ __device__ void loadSmemA(half *smem, half *A, int M, int K, int ko) {
     int logic_col = tid % 4 * 8;
     int row = i * 32 + tid / 8;
     int col = tid % 8 * 8;
-    col = col ^ (((row & 3) << 3));
+    col = col ^ (((row & 0x7) << 3));
     void *ptr = (void *)(smem + row * 64 + col);
     uint32_t smem_ptr;
 
@@ -67,7 +68,7 @@ __device__ void loadSmemB(half *smem, half *B, int N, int K, int ko) {
     int logic_col = tid % 4 * 8;
     int row = i * 32 + tid / 8;
     int col = tid % 8 * 8;
-    col = col ^ (((row & 3) << 3));
+    col = col ^ (((row & 0x7) << 3));
     void *ptr = (void *)(smem + row * 64 + col);
     uint32_t smem_ptr;
 
@@ -117,6 +118,9 @@ __device__ void loadFragA(unsigned int *frag, half *smem, int ki) {
   // load 64x16
   int tx = threadIdx.x;
   int tz = threadIdx.z;
+  int by = blockIdx.y;
+  int bx = blockIdx.x;
+  int ty = threadIdx.y;
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 2; ++j) {
       for (int k = 0; k < 2; ++k) {
@@ -124,7 +128,12 @@ __device__ void loadFragA(unsigned int *frag, half *smem, int ki) {
         int col = ki * KII + k * 8 + tx % 4 * 2;
         col = row % 2 * 32 + col;
         row = row / 2;
-        col = col ^ ((row & 3) << 3);
+        int old_col = col;
+        col = col ^ ((row & 0x7) << 3);
+        if(bx == 0 && by == 0 && ty == 0 && tz == 0)
+        printf("i %d, j %d, k %d,  tx %d, row %d, col %d, old_col %d\n",
+           i, j, k, tx, row, col, old_col);
+        
         unsigned int *ptr =
             reinterpret_cast<unsigned int *>(smem + row * 64 + col);
         frag[i * 4 + j * 2 + k] = ptr[0];
@@ -145,7 +154,7 @@ __device__ void loadFragB(unsigned int *frag, half *smem, int ki) {
         int col = ki * KII + k * 8 + tx % 4 * 2;
         col = row % 2 * 32 + col;
         row = row / 2;
-        col = col ^ ((row & 3) << 3);
+        col = col ^ ((row & 0x7) << 3);
         unsigned int *ptr =
             reinterpret_cast<unsigned int *>(smem + row * 64 + col);
         frag[i * 4 + j * 2 + k] = ptr[0];

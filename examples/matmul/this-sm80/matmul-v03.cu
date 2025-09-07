@@ -12,6 +12,7 @@
 // Running cost of CUDA kernel is 2.44301ms
 // TFLOPS: 48.4567
 
+#include <stdio.h>
 #include <cuda_fp16.h>
 #include <mma.h>
 #include <cuda.h>
@@ -198,7 +199,10 @@ __device__ void mmaSync(unsigned int *fragA, unsigned int *fragB, float *accum)
         : "r"(fragA[0]), "r"(fragA[2]),
           "r"(fragB[0]),
           "f"(accum[0]), "f"(accum[1]), "f"(accum[4]), "f"(accum[5]));
-
+    if(blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0  &&
+       threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0)
+          printf("A %f, %f, %f, %f \n", accum[0], accum[1], accum[4], accum[5]);
+          
     asm volatile(
         "mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 "
         "{%0,  %1,  %2,  %3},"
@@ -209,6 +213,9 @@ __device__ void mmaSync(unsigned int *fragA, unsigned int *fragB, float *accum)
         : "r"(fragA[1]), "r"(fragA[3]),
           "r"(fragB[1]),
           "f"(accum[0]), "f"(accum[1]), "f"(accum[4]), "f"(accum[5]));
+    if(blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0  &&
+       threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0)
+          printf("B %f, %f, %f, %f \n", accum[0], accum[1], accum[4], accum[5]);
 
     asm volatile(
         "mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 "

@@ -1,6 +1,8 @@
 .vscode
 test
 test_cublas
+test15
+test15b
 *.o
 *.out
 *.log

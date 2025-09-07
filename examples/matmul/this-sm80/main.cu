@@ -9,7 +9,7 @@
 
 int STAGES = 1;
 int MULTI_THREADING = 1;
-int ITERS = 20;
+int ITERS = 1;
 
 extern __global__ void matmul(half *A, half *B, half *C, int M, int N, int K, float alpha, float beta);
 
@@ -19,7 +19,7 @@ extern __global__ void matmul(half *A, half *B, half *C, int M, int N, int K, fl
 #include <omp.h>
 const int M = 1024;
 const int N = 1024;
-const int K = 1024;
+const int K = 512;
 #else
 const int M = 5376;
 const int N = 5376;
@@ -247,6 +247,9 @@ int main(int argc, char *argv[])
             }
             if (diff / maxv > 1e-2)
             {
+                // std::cout << "Error at (" << i << ", " << j << "): "
+                //           << (float)golden[i * N + j] << " vs "
+                //           << (float)hC[i * N + j] << "\n";
                 errors += 1;
             }
         }
