@@ -181,13 +181,27 @@ __device__ __forceinline__ void loadFragA(unsigned int *frag, half *smem,
   for (int i = 0; i < 4; ++i) {
     // the following mods make the thread mapping to smem locations consistent with
     // what cutlass implicit gemm layout shows
+    // for a given warp with thread id [0...31]
+    // first step, set row for each thread
+    // the first 16 threads use row numbered 0...15
+    // the 2nd 16 threads also use row numbered 0...15
     int row = tz * 64 + i * 16 + tx % 16; // note difference with matmul-v15 here
+    // second step, set first col for each thread
+    // the first 16 threads use col all numbered 0
+    // the 2nd 16 threads use col all numbered 8
     int col = ki * KII + tx / 16  * 8;    // note difference with matmul-v15 here
     int old_col1 = col;
+    // third step, set 2nd col;
+    // this time for even numbered threads, make 2nd col = 1st col
+    // for odd numbered threads, make 2nd col = 1st col + 32
+    // so now the 1st 16 threads, even threads has col = 0, odds has col = 32
+    // for the 2nd 16 threads, even threads has col = 8, odds has col = 40
     col = row % 2 * 32 + col;
     int old_row = row;
+    // half row such that two consecutive threads share the same row number
     row = row / 2;
     int old_col = col;
+    // do xor to get the final (permuted) col
     col = col ^ (((row & 3) << 3));
     if(bx == 0 && by == 0 && ty == 0 && tz == 0)
         printf("i %d,  tx %d, row %d, col %d, old_row %d, old_col %d, old_col1 %d\n",
